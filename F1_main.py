@@ -1,9 +1,7 @@
 import argparse
 import warnings
 from datetime import datetime
-from pprint import pprint
 
-import numpy as np
 import torch
 import torchvision.transforms as transforms
 from torch.backends import cudnn
@@ -75,12 +73,12 @@ def F1_test():
     during = (b - a).seconds
     print("batch_size = {}".format(args.batch_size))
     print("num_workers = {}".format(args.num_workers))
-    print("image_num = {}".format(test_dataset.__len__()))
-    print("time = {}".format(during))
-    if during == 0:
+    print("image_num = {} 张".format(test_dataset.__len__()))
+    print("time = {} s".format(during))
+    try:
+        print("infer speed = {} 张/s".format(test_dataset.__len__() / during))
+    except ZeroDivisionError:
         print("推理时间不足1s")
-    else:
-        print("infer speed = {}".format(test_dataset.__len__() / during))
 
 
 def test(val_loader, model, attr_num, description):
@@ -177,6 +175,8 @@ def test(val_loader, model, attr_num, description):
     print('\t     Attr              \tp_true/n_true\tp_tol/n_tol\tp_pred/n_pred\tcur_mA')
     mA = 0.0
     for it in range(attr_num):
+        # print("pos_tol = {}".format(pos_tol))
+        # print("neg_tol = {}".format(neg_tol))
         # print("it = {}, description[it] = {}".format(it, description[it]))
         cur_mA = ((1.0 * pos_cnt[it] / pos_tol[it]) + (1.0 * neg_cnt[it] / neg_tol[it])) / 2.0
         mA = mA + cur_mA
