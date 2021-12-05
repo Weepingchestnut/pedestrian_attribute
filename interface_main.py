@@ -7,14 +7,13 @@ from io import BytesIO
 from pprint import pprint
 
 import torch
+import torch.utils.data as data
 import torchvision.transforms as transforms
 import tornado
 from PIL import Image
 from torch.backends import cudnn
 
-import torch.utils.data as data
 import model as models
-from mylogger import logger
 from utils.datasets import attr_nums
 from utils.display import my_rap2_dict
 
@@ -62,12 +61,22 @@ def res_message(img_index, mode):
         return '第' + str(img_index) + '张图片id为空'
     elif mode == 'base64':
         return '第' + str(img_index) + '张图片损坏/非base64编码'
-    elif mode == 'dict_format':
-        return '第' + str(img_index) + '张图片JSON格式错误'
+    elif mode == 'dict_format_0':
+        return '第' + str(img_index) + '张图片JSON格式缺失键img_id与base64_code'
+    elif mode == 'dict_format_1':
+        return '第' + str(img_index) + '张图片JSON缺失键base64_code'
+    elif mode == 'dict_format_10':
+        return '第' + str(img_index) + '张图片JSON缺失键img_id'
 
 
 def is_need_dict(img_dict):
-    return 'img_id' in img_dict.keys() and 'base64_code' in img_dict.keys()
+    record = 0
+    if 'img_id' in img_dict.keys():
+        record = record + 1
+    if 'base64_code' in img_dict.keys():
+        record = record + 10
+    return record
+    # return 'img_id' in img_dict.keys() and 'base64_code' in img_dict.keys()
 
 
 class base64_api(tornado.web.RequestHandler):
@@ -78,10 +87,8 @@ class base64_api(tornado.web.RequestHandler):
     # @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self, *aegs, **kwargs):
+        start_time = time.time()
         request = json.loads(self.request.body)
-        # imgs = request.get('imgs', '')
-        # img_id = request.get('img_id', '')
-        # base64_code = request.get('base64_code', '')
         img_list = request.get('img_list', '')
 
         test_dataset = get_interface_data(imgs_list=img_list)
@@ -94,10 +101,11 @@ class base64_api(tornado.web.RequestHandler):
         response = {'success': True, 'message': ['属性提取成功'], 'attribute': [], 'spendTime': '0 ms'}
         for i, img_dict in enumerate(img_list):
             # 判断JSON是否满足dict格式要求
-            if not is_need_dict(img_dict):
+            get_record = is_need_dict(img_dict)
+            if get_record < 11:
                 response['success'] = False
                 response['message'][0] = '属性提取失败'
-                response['message'].append(res_message(i + 1, 'dict_format'))
+                response['message'].append(res_message(i + 1, 'dict_format_' + str(get_record)))
                 stat = False
             else:
                 # 图片id为空（字符串长度为0 or 字符串均为空格）
@@ -116,12 +124,14 @@ class base64_api(tornado.web.RequestHandler):
         if not stat:
             pass
         else:
-            start_time = time.time()
+            # start_time = time.time()
             response['attribute'] = test(test_loader, pa_model)
-            end_time = time.time()
-            response['spendTime'] = str(round((end_time - start_time), 4) * 1000) + " ms"
-        print(response)
+            # end_time = time.time()
+            # response['spendTime'] = str(round((end_time - start_time), 4) * 1000) + " ms"
+        end_time = time.time()
+        response['spendTime'] = str(round((end_time - start_time), 4) * 1000) + " ms"
         self.write(response)
+        print(response)
 
 
 def pil_to_base64(p264_img):
@@ -203,7 +213,7 @@ def interface_test():
     imag = Image.open('test_data/CAM01_2014-02-15_20140215163848-20140215165240_tarid151_frame2771_line1.png').convert(
         'RGB')
     base64_code = str(pil_to_base64(imag), 'utf-8')  # base64编码b' '前缀的去除
-    # print("base64 = {}".format(base64_code))
+    print("base64_1 = {}".format(base64_code))
     img1 = {
         'img_id': 'CAM01_2014-02-15_20140215163848-20140215165240_tarid151_frame2771_line1.png',
         'base64_code': base64_code
@@ -212,7 +222,7 @@ def interface_test():
     imag = Image.open('test_data/CAM01_2014-02-15_20140215163848-20140215165240_tarid158_frame2878_line1.png').convert(
         'RGB')
     base64_code = str(pil_to_base64(imag), 'utf-8')  # base64编码b' '前缀的去除
-    # print("base64 = {}".format(base64_code))
+    print("base64_2 = {}".format(base64_code))
     img2 = {
         'img_id': 'CAM01_2014-02-15_20140215163848-20140215165240_tarid158_frame2878_line1.png',
         'base64_code': base64_code
@@ -221,12 +231,13 @@ def interface_test():
     imag = Image.open('test_data/CAM01_2014-02-15_20140215163848-20140215165240_tarid163_frame2902_line1.png').convert(
         'RGB')
     base64_code = str(pil_to_base64(imag), 'utf-8')  # base64编码b' '前缀的去除
-    # print("base64 = {}".format(base64_code))
+    print("base64_3 = {}".format(base64_code))
     img3 = {
         'img_id': 'CAM01_2014-02-15_20140215163848-20140215165240_tarid163_frame2902_line1.png',
         'base64_code': base64_code
     }
 
+    start_time = time.time()
     info_list = [img1, img2, img3]
     pprint(info_list)
     # print(info_list[0]['base64_code'])
@@ -241,10 +252,11 @@ def interface_test():
     response = {'success': True, 'message': ['属性提取成功'], 'attribute': [], 'spendTime': '0 ms'}
     for i, img_dict in enumerate(info_list):
         # 判断JSON是否满足dict格式要求
-        if not is_need_dict(img_dict):
+        get_record = is_need_dict(img_dict)
+        if get_record < 11:
             response['success'] = False
             response['message'][0] = '属性提取失败'
-            response['message'].append(res_message(i + 1, 'dict_format'))
+            response['message'].append(res_message(i + 1, 'dict_format_' + str(get_record)))
             stat = False
         else:
             # 图片id为空（字符串长度为0 or 字符串均为空格）
@@ -265,20 +277,19 @@ def interface_test():
         pass
     else:
         # print("stat = True")
-        start_time = time.time()
+        # start_time = time.time()
         response['attribute'] = test(test_loader, pa_model)
-        end_time = time.time()
-        # print(str(round((end_time - start_time), 4) * 1000) + " ms")
-        # response['message'].append('属性提取成功')
-        response['spendTime'] = str(round((end_time - start_time), 4) * 1000) + " ms"
-
+        # end_time = time.time()
+        # response['spendTime'] = str(round((end_time - start_time), 4) * 1000) + " ms"
+    end_time = time.time()
+    response['spendTime'] = str(round((end_time - start_time), 4) * 1000) + " ms"
     print(response)
 
 
 def test(val_loader, model):
     model.eval()
     attr = []
-    img_dict = {'img_id': '', 'attr_dict': dict()}
+    # img_dict = {'img_id': '', 'attr_dict': dict()}
 
     for i, _ in enumerate(val_loader):
         input, img_id = _
@@ -294,6 +305,7 @@ def test(val_loader, model):
 
         for one_bs in range(bs):
             # print("img_id: {}".format(img_id[one_bs]))
+            img_dict = dict()
             one_img_id = img_id[one_bs]
             output_list = output[one_bs].tolist()
             # print("output_list = {}".format(output_list))

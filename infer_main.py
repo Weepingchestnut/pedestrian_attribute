@@ -18,7 +18,7 @@ parser.add_argument('--batch_size', default=32, type=int, required=False, help='
 parser.add_argument('--num_workers', default=4, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--resume_path', default='checkpoint/ublb_12_ma74-44_train_all_bs32.pth.tar', type=str,
                     required=False, help='(default=%(default)s)')
-parser.add_argument('--test_data_path', default='test_data/rap_test_5k', type=str, required=False,
+parser.add_argument('--test_data_path', default='test_data/shisuo_hb_test/humanbody_imgs', type=str, required=False,
                     help='(default=%(default)s)')
 parser.add_argument('-c', '--confidence', dest='confidence', action='store_true', required=False,
                     help='print attribute confidence in imag')
@@ -82,7 +82,7 @@ def batch_test(test_data_path):
     print("image_num = {} 张".format(test_dataset.__len__()))
     print("time = {} s".format(during))
     try:
-        print("infer speed = {} 张/s".format(test_dataset.__len__() / during))
+        print("infer speed = {} 张/s".format(round(test_dataset.__len__() / during, 2)))
     except ZeroDivisionError:
         print("推理时间不足1s")
 

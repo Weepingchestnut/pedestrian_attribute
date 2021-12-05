@@ -1,5 +1,5 @@
 # pedestrian_attribute
-shisuo pedestrian_attribute
+ss pedestrian_attribute
 
 ### 批量测试
 ```shell
@@ -29,3 +29,6 @@ python F1_main.py [--batch_size ${BATCH SIZE NUMBER}] [--num_workers ${NUM_WORKE
 ```shell
 python F1_main.py --batch_size 32 --num_workers 4 --resume_path checkpoint/test.pth --test_data_path test_data/rap_test --test_data_label data_list/my_rap2/test.txt
 ```
+
+## Acknowledgements
+本项目代码基于 [iccv19_attribute](https://github.com/chufengt/iccv19_attribute) 编写，感谢原作者的代码分享。 
