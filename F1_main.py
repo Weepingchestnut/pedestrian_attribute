@@ -19,9 +19,9 @@ parser.add_argument('--batch_size', default=32, type=int, required=False, help='
 parser.add_argument('--num_workers', default=4, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--resume_path', default='checkpoint/ublb_12_ma74-44_train_all_bs32.pth.tar', type=str,
                     required=False, help='(default=%(default)s)')
-parser.add_argument('--test_data_path', default='data/RAP2/RAP_dataset', type=str, required=False,
+parser.add_argument('--test_data_path', default='test_data/F1_ped_test', type=str, required=False,
                     help='(default=%(default)s)')
-parser.add_argument('--test_data_label', default='data_list/my_rap2/test.txt', type=str, required=False,
+parser.add_argument('--test_data_label', default='data_list/F1_face_test.txt', type=str, required=False,
                     help='(default=%(default)s)')
 
 args = parser.parse_args()
@@ -127,6 +127,7 @@ def test(val_loader, model, attr_num, description):
             # print("output_list = {}".format(output_list))
             attr_dict, one_bs_output = my_rap2_dict_F1(output_list)
             # print(attr_dict)
+            # print("one_bs_output = {}".format(one_bs_output))
             output_adj.append(one_bs_output)
 
         output = np.array(output_adj)
@@ -172,32 +173,11 @@ def test(val_loader, model, attr_num, description):
                 recall = recall + 1.0 * tp / (tp + fn)
 
     print('=' * 100)
-    print('\t     Attr              \tp_true/n_true\tp_tol/n_tol\tp_pred/n_pred\tcur_mA')
-    mA = 0.0
-    for it in range(attr_num):
-        # print("pos_tol = {}".format(pos_tol))
-        # print("neg_tol = {}".format(neg_tol))
-        # print("it = {}, description[it] = {}".format(it, description[it]))
-        cur_mA = ((1.0 * pos_cnt[it] / pos_tol[it]) + (1.0 * neg_cnt[it] / neg_tol[it])) / 2.0
-        mA = mA + cur_mA
-        print('\t#{:2}: {:18}\t{:4}\{:4}\t{:4}\{:4}\t{:4}\{:4}\t{:.5f}'.format(it,
-                                                                               description[it],
-                                                                               pos_cnt[it],
-                                                                               neg_cnt[it],
-                                                                               pos_tol[it],
-                                                                               neg_tol[it],
-                                                                               (pos_cnt[it] + neg_tol[it] - neg_cnt[it]),
-                                                                               (neg_cnt[it] + pos_tol[it] - pos_cnt[it]),
-                                                                               cur_mA))
-    mA = mA / attr_num
-    print('\t' + 'mA:        ' + str(mA))
-
     if attr_num != 1:
-        accu = accu / tol
         prec = prec / tol
         recall = recall / tol
         f1 = 2.0 * prec * recall / (prec + recall)
-        print('\t' + 'Accuracy:  ' + str(accu))
+
         print('\t' + 'Precision: ' + str(prec))
         print('\t' + 'Recall:    ' + str(recall))
         print('\t' + 'F1_Score:  ' + str(f1))

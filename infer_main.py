@@ -7,7 +7,7 @@ import torchvision.transforms as transforms
 from torch.backends import cudnn
 
 import model as models
-from utils.datasets import attr_nums, get_test_data
+from utils.datasets import attr_nums, get_test_data, Get_Dataset
 from utils.display import *
 
 warnings.filterwarnings('ignore')
@@ -23,7 +23,9 @@ parser.add_argument('--test_data_path', default='test_data/shisuo_hb_test/humanb
 parser.add_argument('-c', '--confidence', dest='confidence', action='store_true', required=False,
                     help='print attribute confidence in imag')
 parser.add_argument('-s', '--show', dest='show', action='store_true', required=False, help='show attribute in imag')
-parser.add_argument('--save_path', default='work_dir/my_rap2_output_img', type=str, required=False,
+parser.add_argument('-sp', '--speed', dest='speed', action='store_true', required=False, help='test infer speed')
+parser.add_argument('-spf', '--speed_print', dest='speed_print', action='store_true', required=False, help='test infer speed and print attribute')
+parser.add_argument('--save_path', default='work_dir/shisuo_hb_test-s-c', type=str, required=False,
                     help='(default=%(default)s)')
 
 args = parser.parse_args()
@@ -38,14 +40,21 @@ transform_test = transforms.Compose([
 
 def prepare_model():
     # create model
-    model = models.__dict__['inception_iccv'](pretrained=True, num_classes=attr_nums['my_rap2'])
+    if args.speed or args.speed_print:
+        model = models.__dict__['inception_iccv'](pretrained=True, num_classes=attr_nums['ped_attr_tiny'])
+    else:
+        model = models.__dict__['inception_iccv'](pretrained=True, num_classes=attr_nums['my_rap2'])
 
     # for training on multiple GPUs.
     # Use CUDA_VISIBLE_DEVICES=0,1 to specify which GPUs to use
     model = torch.nn.DataParallel(model).cuda()
+    # model = model.cuda()
 
     # optionally resume from a checkpoint
-    checkpoint = torch.load(args.resume_path)
+    if args.speed or args.speed_print:
+        checkpoint = torch.load('checkpoint/9_mA_81-72.pth.tar')
+    else:
+        checkpoint = torch.load(args.resume_path)
     model.load_state_dict(checkpoint['state_dict'])
 
     cudnn.benchmark = False
@@ -68,6 +77,10 @@ def batch_test(test_data_path):
             img_names.append(file)
 
     test_dataset = get_test_data(root=test_data_path, label=img_names, transform=transform_test)
+    # if batch_size default and speed test, batch_size = 64
+    # speed test but you set batch_size, batch_size = what you set
+    if (args.speed or args.speed_print) and args.batch_size == 32:
+        args.batch_size = 64
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True
@@ -77,14 +90,18 @@ def batch_test(test_data_path):
     test(test_loader, pa_model)
     b = datetime.now()
     during = (b - a).seconds
-    print("batch_size = {}".format(args.batch_size))
-    print("num_workers = {}".format(args.num_workers))
-    print("image_num = {} 张".format(test_dataset.__len__()))
-    print("time = {} s".format(during))
-    try:
-        print("infer speed = {} 张/s".format(round(test_dataset.__len__() / during, 2)))
-    except ZeroDivisionError:
-        print("推理时间不足1s")
+
+    if args.speed or args.speed_print:
+        print("=" * 100)
+        print("batch_size = {}".format(args.batch_size))
+        print("num_workers = {}".format(args.num_workers))
+        print("image_num = {} 张".format(test_dataset.__len__()))
+        print("time = {} s".format(during))
+        try:
+            print("infer speed = {} 张/s".format(round(test_dataset.__len__() / during, 2)))
+        except ZeroDivisionError:
+            print("推理时间不足1s")
+        print("=" * 100)
 
 
 def test(val_loader, model):
@@ -102,18 +119,23 @@ def test(val_loader, model):
 
         output = torch.sigmoid(output.data).cpu().numpy()
 
-        for one_bs in range(bs):
-            print("img_name: {}".format(img_name[one_bs]))
-            one_img_name = img_name[one_bs]
-            output_list = output[one_bs].tolist()
-            # print("output_list = {}".format(output_list))
-            if args.confidence:
-                attr_dict = my_rap2_dict_c(output_list)
-            else:
-                attr_dict = my_rap2_dict(output_list)
-            print(attr_dict)
-            if args.show:
-                show_attribute_img(one_img_name, attr_dict)
+        if args.speed:      # 测速时不进行每张图片的属性分析
+            pass
+        else:
+            for one_bs in range(bs):
+                print("img_name: {}".format(img_name[one_bs]))
+                one_img_name = img_name[one_bs]
+                output_list = output[one_bs].tolist()
+                # print("output_list = {}".format(output_list))
+                if args.confidence:
+                    attr_dict = my_rap2_dict_c(output_list)
+                elif args.speed_print:
+                    attr_dict = my_rap2_tiny_dict(output_list)
+                else:
+                    attr_dict = my_rap2_dict(output_list)
+                print(attr_dict)
+                if args.show:
+                    show_attribute_img(one_img_name, attr_dict)
 
 
 if __name__ == '__main__':

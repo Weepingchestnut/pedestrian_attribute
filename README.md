@@ -1,6 +1,16 @@
 # pedestrian_attribute
 ss pedestrian_attribute
 
+### 模型训练
+```shell
+python main.py 
+```
+
+举个栗子：
+```shell
+python main.py 
+```
+
 ### 批量测试
 ```shell
 python infer_main.py [--batch_size ${BATCH SIZE NUMBER}] [--num_workers ${NUM_WORKERS NUMBER}] [--resume_path ${CHECKPOINT_FILE}] [--test_data_path ${TEST_DATA_PATH}] [-c] [-s] [--save_path ${SAVE_PATH}]
@@ -8,7 +18,11 @@ python infer_main.py [--batch_size ${BATCH SIZE NUMBER}] [--num_workers ${NUM_WO
 
 举个栗子：
 ```shell
+# 属性模式
 python infer_main.py --batch_size 32 --num_workers 4 --resume_path checkpoint/test.pth --test_data_path test_data/rap_test -c -s --save_path work_dir/rap_test_output_img
+
+# 测速模式
+python infer_main.py --test_data_path test_data/rap_test -sp/spf
 ```
 
 #### 可选参数
@@ -18,6 +32,8 @@ python infer_main.py --batch_size 32 --num_workers 4 --resume_path checkpoint/te
 - `--test_data_path`: 测试数据的存放路径；
 - `-c/--confidence`: 输出预测属性的置信度；
 - `-s/--show`: 是否将属性预测结果打印到图片中；
+- `-sp/--speed`: 测速模式，测速模式时batch_size=64；
+- `-spf/--speed_print`: 测速模式时是否输出属性到终端；
 - `--save_path`: 指定输出具有属性预测结果的图片路径。
 
 ### 指标测试

@@ -15,10 +15,10 @@ from utils.datasets import Get_Dataset
 from utils.display import *
 
 parser = argparse.ArgumentParser(description='Pedestrian Attribute Framework')
-parser.add_argument('--experiment', default='my_rap2', type=str, required=False, help='(default=%(default)s)')
+parser.add_argument('--experiment', default='my_rap2_tiny', type=str, required=False, help='(default=%(default)s)')
 parser.add_argument('--approach', default='inception_iccv', type=str, required=False, help='(default=%(default)s)')
 parser.add_argument('--epochs', default=60, type=int, required=False, help='(default=%(default)d)')
-parser.add_argument('--batch_size', default=32, type=int, required=False, help='(default=%(default)d)')
+parser.add_argument('--batch_size', default=64, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--lr', '--learning-rate', default=0.0001, type=float, required=False, help='(default=%(default)f)')
 parser.add_argument('--optimizer', default='adam', type=str, required=False, help='(default=%(default)s)')
 parser.add_argument('--momentum', default=0.9, type=float, required=False, help='(default=%(default)f)')
@@ -26,10 +26,10 @@ parser.add_argument('--weight_decay', default=0.0005, type=float, required=False
 parser.add_argument('--start-epoch', default=0, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--print_freq', default=100, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--save_freq', default=10, type=int, required=False, help='(default=%(default)d)')
-parser.add_argument('--resume', default='checkpoint/ublb_12_ma74-44_train_all_bs32.pth.tar', type=str, required=False, help='(default=%(default)s)')
+parser.add_argument('--resume', default='', type=str, required=False, help='(default=%(default)s)')
 parser.add_argument('--decay_epoch', default=(2, 40), type=eval, required=False, help='(default=%(default)d)')  # default=(20, 40)
 parser.add_argument('--prefix', default='', type=str, required=False, help='(default=%(default)s)')
-parser.add_argument('--td_path', default='/home/lzk/data/face_data/RAP2/RAP_dataset_all', type=str, required=False, help='(default=%(default)s)')
+parser.add_argument('--test_data_path', default='/home/lzk/data/face_data/RAP2/RAP_dataset', type=str, required=False, help='(default=%(default)s)')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true', required=False, help='evaluate model on validation set')
 
 # Seed
@@ -107,14 +107,20 @@ def main():
                                     momentum=args.momentum,
                                     weight_decay=args.weight_decay)
 
-    # if args.evaluate:
-    #     a = datetime.now()
-    #     test(val_loader, model, attr_num, description)
-    #     b = datetime.now()
-    #     during = (b - a).seconds
-    #     print("time = {}".format(during))
-    #     print("speed = {}".format(val_dataset.__len__() / during))
-    #     return
+    if args.evaluate:
+        a = datetime.now()
+        test(val_loader, model, attr_num, description)
+        b = datetime.now()
+        during = (b - a).seconds
+        print("batch_size = {}".format(args.batch_size))
+        print("num_workers = {}".format(args.num_workers))
+        print("image_num = {} 张".format(val_dataset.__len__()))
+        print("time = {} s".format(during))
+        try:
+            print("infer speed = {} 张/s".format(val_dataset.__len__() / during))
+        except ZeroDivisionError:
+            print("推理时间不足1s")
+        return
 
     # a = datetime.now()
     # test(val_loader, model, attr_num, description)
@@ -370,7 +376,7 @@ def test(val_loader, model, attr_num, description):
 
 def save_checkpoint(state, epoch, prefix, filename='.pth.tar'):
     """Saves checkpoint to disk"""
-    directory = "your_path_" + args.experiment + '/' + args.approach + '/'
+    directory = "work_dir/train_" + args.experiment + '/' + args.approach + '/'
     if not os.path.exists(directory):
         os.makedirs(directory)
     if prefix == '':

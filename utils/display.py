@@ -10,11 +10,12 @@ from utils.attri_dict import *
 data_path = args.test_data_path
 save_path = args.save_path
 
-if not os.path.exists(save_path):
-    os.mkdir(save_path)
-
 
 def show_attribute_img(img_name, attri_dict):
+    # make not exist dir
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
     img_path = os.path.join(data_path, img_name)
     print("img_path = {}".format(img_path))
     attr_list = list(attri_dict.keys())
@@ -114,6 +115,55 @@ def my_rap2_dict(output_list):
     return pa_dict
 
 
+def my_rap2_tiny_dict(output_list):
+    pa_dict = {
+        '上衣类型': '未知',
+        '上衣颜色': '未知',
+        '下衣类型': '未知',
+        '下衣颜色': '未知',
+        '鞋子颜色': '未知',
+        '是否背包': '未知'
+    }
+    ub_list = output_list[0:5]
+    ub_color_list = output_list[5:11]
+    lb_list = output_list[11:15]
+    lb_color_list = output_list[15:18]
+    shoes_color_list = output_list[18: 22]
+    bag_list = output_list[22]
+
+    if max(ub_list) < 0.5:
+        pass
+    else:
+        pa_dict['上衣类型'] = rap2_ub_tiny_dict[ub_list.index(max(ub_list))]
+
+    if max(ub_color_list) < 0.5:
+        pass
+    else:
+        pa_dict['上衣颜色'] = rap2_ub_color_tiny_dict[ub_color_list.index(max(ub_color_list))]
+
+    if max(lb_list) < 0.5:
+        pass
+    else:
+        pa_dict['下衣类型'] = rap2_lb_tiny_dict[lb_list.index(max(lb_list))]
+
+    if max(lb_color_list) < 0.4:
+        pass
+    else:
+        pa_dict['下衣颜色'] = rap2_lb_color_tiny_dict[lb_color_list.index(max(lb_color_list))]
+
+    if max(shoes_color_list) < 0.4:
+        pass
+    else:
+        pa_dict['鞋子颜色'] = rap2_shoes_color_tiny_dict[shoes_color_list.index(max(shoes_color_list))]
+    # bag = rap2_bag_dict[bag_list.index(max(bag_list))]
+    if bag_list > 0.5:
+        pa_dict['是否背包'] = '是'
+    else:
+        pa_dict['是否背包'] = '否'
+
+    return pa_dict
+
+
 def my_rap2_dict_F1(output_list):
     # for i, value in enumerate(output_list):
     #     print("{}: {}".format(i, value))
@@ -141,9 +191,13 @@ def my_rap2_dict_F1(output_list):
         for i in range(0, 10):
             F1_list[i] = -1
     else:
+        ub_list_sort = sorted(ub_list)  # 排序后ub_list
         ub_list_index = ub_list.index(max(ub_list))
         pa_dict['上衣类型'] = rap2_ub_dict[ub_list_index]
         F1_list[ub_list_index] = 1
+        # 取置信度第二的属性也赋1
+        if ub_list_sort[-2] > 0.5:
+            F1_list[ub_list.index(ub_list_sort[-2])] = 1
 
     if max(ub_color_list) < 0.5:
         for i in range(10, 24):

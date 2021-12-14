@@ -79,7 +79,8 @@ class get_test_data(data.Dataset):
 attr_nums = {
     'rap': 51,
     'my_rap2': 62,
-    'ped_attr': 61
+    'ped_attr': 61,
+    'ped_attr_tiny': 23
 }
 
 description = {'rap': ['Female',
@@ -201,6 +202,14 @@ description_chinese = {'rap': ['性别',
                            '黑', '白', '灰', '红', '绿', '蓝', '银', '黄', '棕', '紫', '粉', '橙', '混色', '其他',  # 下衣颜色
                            '黑', '白', '灰', '红', '绿', '蓝', '银', '黄', '棕', '紫', '粉', '橙', '混色', '其他',  # 鞋子颜色
                            '是否背包'
+                       ],
+                       'ped_attr_tiny': [
+                           '外套', '衬衣', '毛衣', 'T恤', '短袖',    # 上衣
+                           '黑', '白', '灰', '红', '蓝', '黄',
+                           '长裤', '短裤', '裙子', '牛仔裤',
+                           '黑', '白', '灰',
+                           '黑', '白', '灰', '棕',
+                           '是否背包'
                        ]}
 
 
@@ -230,7 +239,14 @@ def Get_Dataset(experiment, data_path):
 
     if experiment == 'my_rap2':
         train_dataset = MultiLabelDataset(root=data_path,
-                                          label='data_list/my_rap2/train_all.txt', transform=transform_train)
+                                          label='data_list/my_rap2/train.txt', transform=transform_train)
         val_dataset = MultiLabelDataset(root=data_path,
-                                        label='data_list/my_rap2/test_all.txt', transform=transform_test)
+                                        label='data_list/my_rap2/test.txt', transform=transform_test)
         return train_dataset, val_dataset, attr_nums['my_rap2'], description_chinese['my_rap2']
+
+    if experiment == 'my_rap2_tiny':
+        train_dataset = MultiLabelDataset(root=data_path,
+                                          label='data_list/train_tiny.txt', transform=transform_train)
+        val_dataset = MultiLabelDataset(root=data_path,
+                                        label='data_list/test_tiny.txt', transform=transform_test)
+        return train_dataset, val_dataset, attr_nums['ped_attr_tiny'], description_chinese['ped_attr_tiny']

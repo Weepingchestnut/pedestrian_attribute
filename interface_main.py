@@ -86,7 +86,7 @@ class base64_api(tornado.web.RequestHandler):
 
     # @tornado.web.asynchronous
     @tornado.gen.coroutine
-    def post(self, *aegs, **kwargs):
+    def post(self, *args, **kwargs):
         start_time = time.time()
         request = json.loads(self.request.body)
         img_list = request.get('img_list', '')
