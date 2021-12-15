@@ -21,7 +21,7 @@ parser.add_argument('--resume_path', default='checkpoint/ublb_12_ma74-44_train_a
                     required=False, help='(default=%(default)s)')
 parser.add_argument('--test_data_path', default='test_data/F1_ped_test', type=str, required=False,
                     help='(default=%(default)s)')
-parser.add_argument('--test_data_label', default='data_list/F1_face_test.txt', type=str, required=False,
+parser.add_argument('--test_data_label', default='data_list/F1_ped_test.txt', type=str, required=False,
                     help='(default=%(default)s)')
 
 args = parser.parse_args()

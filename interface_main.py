@@ -94,7 +94,7 @@ class base64_api(tornado.web.RequestHandler):
         test_dataset = get_interface_data(imgs_list=img_list)
         test_loader = torch.utils.data.DataLoader(
             test_dataset,
-            batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True
+            batch_size=32, shuffle=False, num_workers=4, pin_memory=True
         )
 
         stat = True

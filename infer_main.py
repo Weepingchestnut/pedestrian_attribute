@@ -1,13 +1,16 @@
 import argparse
+import logging
+import time
 import warnings
 from datetime import datetime
 
 import torch
 import torchvision.transforms as transforms
 from torch.backends import cudnn
+from tqdm import tqdm
 
 import model as models
-from utils.datasets import attr_nums, get_test_data, Get_Dataset
+from utils.datasets import attr_nums, get_test_data
 from utils.display import *
 
 warnings.filterwarnings('ignore')
@@ -18,14 +21,14 @@ parser.add_argument('--batch_size', default=32, type=int, required=False, help='
 parser.add_argument('--num_workers', default=4, type=int, required=False, help='(default=%(default)d)')
 parser.add_argument('--resume_path', default='checkpoint/ublb_12_ma74-44_train_all_bs32.pth.tar', type=str,
                     required=False, help='(default=%(default)s)')
-parser.add_argument('--test_data_path', default='test_data/shisuo_hb_test/humanbody_imgs', type=str, required=False,
+parser.add_argument('--test_data_path', default='test_data/rap_test_1k', type=str, required=False,
                     help='(default=%(default)s)')
 parser.add_argument('-c', '--confidence', dest='confidence', action='store_true', required=False,
                     help='print attribute confidence in imag')
 parser.add_argument('-s', '--show', dest='show', action='store_true', required=False, help='show attribute in imag')
 parser.add_argument('-sp', '--speed', dest='speed', action='store_true', required=False, help='test infer speed')
 parser.add_argument('-spf', '--speed_print', dest='speed_print', action='store_true', required=False, help='test infer speed and print attribute')
-parser.add_argument('--save_path', default='work_dir/shisuo_hb_test-s-c', type=str, required=False,
+parser.add_argument('--save_path', default='work_dir/F1_ped_test_output', type=str, required=False,
                     help='(default=%(default)s)')
 
 args = parser.parse_args()
@@ -67,6 +70,33 @@ pa_model = prepare_model()
 
 
 def batch_test(test_data_path):
+    ####
+    # logger = logging.getLogger()
+    # logger.setLevel(logging.INFO)
+    # rq = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
+    # log_path = os.path.dirname(os.getcwd()) + '/Logs/'
+    #
+    # task_log_path = os.path.join(log_path, 'speed')
+    # if not os.path.exists(task_log_path):
+    #     os.makedirs(task_log_path)
+    # log_name = task_log_path + '/' + rq + '.log'
+    # logfile = log_name
+    # fh = logging.FileHandler(logfile, mode='w')
+    # fh.setLevel(logging.DEBUG)  # 输出到file的log等级的开关
+    # formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
+    # fh.setFormatter(formatter)
+    # logger.addHandler(fh)
+    # logger.info("Task:acc")
+    # logger.info("test_data_folder:{}".format(args.test_data_path))
+
+    logging.basicConfig(level=logging.INFO,  # 控制台打印的日志级别
+                        filename='test_log.log',
+                        filemode='a',  # 模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
+                        # a是追加模式，默认如果不写的话，就是追加模式
+                        format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s'
+                        # 日志格式
+                        )
+
     # make img_name list
     img_names = []
     for file in os.listdir(test_data_path):
@@ -79,8 +109,6 @@ def batch_test(test_data_path):
     test_dataset = get_test_data(root=test_data_path, label=img_names, transform=transform_test)
     # if batch_size default and speed test, batch_size = 64
     # speed test but you set batch_size, batch_size = what you set
-    if (args.speed or args.speed_print) and args.batch_size == 32:
-        args.batch_size = 64
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True
@@ -107,21 +135,33 @@ def batch_test(test_data_path):
 def test(val_loader, model):
     model.eval()
 
-    for i, _ in enumerate(val_loader):
-        input, img_name = _
-        input = input.cuda(non_blocking=True)
-        output = model(input)
-        bs = input.size(0)
+    if args.speed:
+        for i, _ in tqdm(enumerate(val_loader), total=len(val_loader)):
+            # for i, _ in tqdm(enumerate(val_loader), total=len(val_loader)):
+            input, img_name = _
+            input = input.cuda(non_blocking=True)
+            output = model(input)
+            bs = input.size(0)
 
-        # maximum voting
-        # if type(output) == type(()) or type(output) == type([]):
-        output = torch.max(torch.max(torch.max(output[0], output[1]), output[2]), output[3])
+            # maximum voting
+            # if type(output) == type(()) or type(output) == type([]):
+            output = torch.max(torch.max(torch.max(output[0], output[1]), output[2]), output[3])
 
-        output = torch.sigmoid(output.data).cpu().numpy()
+            output = torch.sigmoid(output.data).cpu().numpy()
+    else:
+        for i, _ in enumerate(val_loader):
+            # for i, _ in tqdm(enumerate(val_loader), total=len(val_loader)):
+            input, img_name = _
+            input = input.cuda(non_blocking=True)
+            output = model(input)
+            bs = input.size(0)
 
-        if args.speed:      # 测速时不进行每张图片的属性分析
-            pass
-        else:
+            # maximum voting
+            # if type(output) == type(()) or type(output) == type([]):
+            output = torch.max(torch.max(torch.max(output[0], output[1]), output[2]), output[3])
+
+            output = torch.sigmoid(output.data).cpu().numpy()
+
             for one_bs in range(bs):
                 print("img_name: {}".format(img_name[one_bs]))
                 one_img_name = img_name[one_bs]
