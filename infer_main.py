@@ -1,6 +1,6 @@
 import argparse
 import logging
-import time
+import traceback
 import warnings
 from datetime import datetime
 
@@ -10,11 +10,11 @@ from torch.backends import cudnn
 from tqdm import tqdm
 
 import model as models
+from mylogger import logger_init
 from utils.datasets import attr_nums, get_test_data
 from utils.display import *
 
 warnings.filterwarnings('ignore')
-
 
 parser = argparse.ArgumentParser(description='Pedestrian Attribute Framework')
 parser.add_argument('--batch_size', default=32, type=int, required=False, help='(default=%(default)d)')
@@ -27,11 +27,29 @@ parser.add_argument('-c', '--confidence', dest='confidence', action='store_true'
                     help='print attribute confidence in imag')
 parser.add_argument('-s', '--show', dest='show', action='store_true', required=False, help='show attribute in imag')
 parser.add_argument('-sp', '--speed', dest='speed', action='store_true', required=False, help='test infer speed')
-parser.add_argument('-spf', '--speed_print', dest='speed_print', action='store_true', required=False, help='test infer speed and print attribute')
+parser.add_argument('-spf', '--speed_print', dest='speed_print', action='store_true', required=False,
+                    help='test infer speed and print attribute')
 parser.add_argument('--save_path', default='work_dir/F1_ped_test_output', type=str, required=False,
                     help='(default=%(default)s)')
 
 args = parser.parse_args()
+
+# ####
+# logger = logging.getLogger()
+# logger.setLevel(logging.DEBUG)
+# rq = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
+# log_path = os.path.dirname(os.getcwd()) + '/Logs/'
+#
+# task_log_path = os.path.join(log_path, 'speed')
+# if not os.path.exists(task_log_path):
+#     os.makedirs(task_log_path)
+# log_name = task_log_path + '/' + rq + '.log'
+# logfile = log_name
+# fh = logging.FileHandler(logfile, mode='w')
+# fh.setLevel(logging.DEBUG)  # 输出到file的log等级的开关
+# formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
+# fh.setFormatter(formatter)
+# logger.addHandler(fh)
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 transform_test = transforms.Compose([
@@ -70,33 +88,6 @@ pa_model = prepare_model()
 
 
 def batch_test(test_data_path):
-    ####
-    # logger = logging.getLogger()
-    # logger.setLevel(logging.INFO)
-    # rq = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
-    # log_path = os.path.dirname(os.getcwd()) + '/Logs/'
-    #
-    # task_log_path = os.path.join(log_path, 'speed')
-    # if not os.path.exists(task_log_path):
-    #     os.makedirs(task_log_path)
-    # log_name = task_log_path + '/' + rq + '.log'
-    # logfile = log_name
-    # fh = logging.FileHandler(logfile, mode='w')
-    # fh.setLevel(logging.DEBUG)  # 输出到file的log等级的开关
-    # formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
-    # fh.setFormatter(formatter)
-    # logger.addHandler(fh)
-    # logger.info("Task:acc")
-    # logger.info("test_data_folder:{}".format(args.test_data_path))
-
-    logging.basicConfig(level=logging.INFO,  # 控制台打印的日志级别
-                        filename='test_log.log',
-                        filemode='a',  # 模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
-                        # a是追加模式，默认如果不写的话，就是追加模式
-                        format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s'
-                        # 日志格式
-                        )
-
     # make img_name list
     img_names = []
     for file in os.listdir(test_data_path):
@@ -120,16 +111,24 @@ def batch_test(test_data_path):
     during = (b - a).seconds
 
     if args.speed or args.speed_print:
-        print("=" * 100)
-        print("batch_size = {}".format(args.batch_size))
-        print("num_workers = {}".format(args.num_workers))
-        print("image_num = {} 张".format(test_dataset.__len__()))
-        print("time = {} s".format(during))
+        # print("=" * 100)
+        logging.info("=" * 100)
+        # print("batch_size = {}".format(args.batch_size))
+        logging.info("batch_size = {}".format(args.batch_size))
+        # print("num_workers = {}".format(args.num_workers))
+        logging.info("num_workers = {}".format(args.num_workers))
+        # print("image_num = {} 张".format(test_dataset.__len__()))
+        logging.info("image_num = {} 张".format(test_dataset.__len__()))
+        # print("time = {} s".format(during))
+        logging.info("time = {} s".format(during))
         try:
-            print("infer speed = {} 张/s".format(round(test_dataset.__len__() / during, 2)))
+            # print("infer speed = {} 张/s".format(round(test_dataset.__len__() / during, 2)))
+            logging.info("infer speed = {} 张/s".format(round(test_dataset.__len__() / during, 2)))
         except ZeroDivisionError:
-            print("推理时间不足1s")
-        print("=" * 100)
+            # print("推理时间不足1s")
+            logging.info("推理时间不足1s")
+        # print("=" * 100)
+        logging.info("=" * 100)
 
 
 def test(val_loader, model):
@@ -163,7 +162,8 @@ def test(val_loader, model):
             output = torch.sigmoid(output.data).cpu().numpy()
 
             for one_bs in range(bs):
-                print("img_name: {}".format(img_name[one_bs]))
+                # print("img_name: {}".format(img_name[one_bs]))
+                # logging.info("img_name: {}".format(img_name[one_bs]))
                 one_img_name = img_name[one_bs]
                 output_list = output[one_bs].tolist()
                 # print("output_list = {}".format(output_list))
@@ -173,10 +173,15 @@ def test(val_loader, model):
                     attr_dict = my_rap2_tiny_dict(output_list)
                 else:
                     attr_dict = my_rap2_dict(output_list)
-                print(attr_dict)
+                # print(attr_dict)
+                logging.info("img_name: {} ".format(img_name[one_bs]) + str(attr_dict))
                 if args.show:
                     show_attribute_img(one_img_name, attr_dict)
 
 
 if __name__ == '__main__':
-    batch_test(args.test_data_path)
+    logger_init(log_file_name='infer_log', log_level=logging.INFO, log_dir='./logs/inference_log/')
+    try:
+        batch_test(args.test_data_path)
+    except:
+        logging.error(str(traceback.format_exc()))
